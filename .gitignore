@@ -11,6 +11,7 @@ frontend/node_modules/
 frontend/dist/
 frontend/.vite/
 frontend/tsconfig.tsbuildinfo
+frontend/vite.log
 
 # --- Secrets / local env ---
 backend/.env
@@ -23,3 +24,6 @@ frontend/.env
 # --- Editors / OS ---
 .DS_Store
 Thumbs.db
+
+# --- Local / AI tooling ---
+.claude/
