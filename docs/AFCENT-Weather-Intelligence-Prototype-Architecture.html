@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AFCENT Weather Intelligence SaaS — Prototype Architecture &amp; Analysis</title>
+<style>
+  :root{
+    /* Neutral U.S. DoD-style palette: navy primary, muted gold accent, soft greys */
+    --navy-deep:#12263a; --navy:#1f4468; --navy-mid:#2d5c86; --steel:#5b7d9c;
+    --gold:#8a6d2f; --gold-tint:#f7f2e6; --gold-border:#ddd0b0;
+    --tint:#eef3f7; --border-accent:#c3d4e2;
+    --black:#12263a; --white:#FFF;
+    --ink:#1b2733; --muted:#5c6b7a; --line:#e3e8ed; --soft:#f7f9fb;
+    --ok:#2f6b46; --warn:#8a6d1f; --risk:#a33a2e;
+    --shadow:0 3px 14px rgba(18,38,58,.07);
+    --font:'Segoe UI','Source Sans Pro','Helvetica Neue',Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;font-family:var(--font);color:var(--ink);background:#f1f4f7;line-height:1.55;}
+  a{color:var(--navy-mid);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+
+  /* Document strip */
+  .docbar{background:var(--navy-deep);color:var(--white);display:flex;align-items:center;
+    justify-content:space-between;gap:16px;padding:13px 34px;position:sticky;top:0;z-index:60;
+    border-bottom:3px solid var(--gold);}
+  .docmark{font-size:15px;font-weight:600;letter-spacing:.4px;}
+  .docmark .sep{color:var(--steel);margin:0 8px;font-weight:400;}
+  .docmark .lt{color:#b9cadb;font-weight:400;}
+  .docbar .tag{font-size:11.5px;color:#a8bccd;letter-spacing:.6px;text-transform:uppercase;text-align:right;}
+
+  /* Hero */
+  .hero{background:linear-gradient(120deg,var(--navy-deep) 0%,var(--navy) 62%,var(--navy-mid) 130%);
+    color:var(--white);padding:42px 34px 36px;}
+  .hero h1{margin:0 0 10px;font-size:32px;line-height:1.18;font-weight:600;max-width:960px;letter-spacing:-.2px;}
+  .hero p.sub{margin:0 0 14px;font-size:15.5px;color:#d3e0ec;max-width:860px;}
+  .hero p.src{margin:0 0 20px;font-size:12.5px;color:#a8bccd;max-width:860px;}
+  .hero p.src a{color:#dce7f0;border-bottom:1px solid rgba(220,231,240,.45);word-break:break-all;}
+  .hero p.src a:hover{color:#fff;text-decoration:none;}
+  .facts{display:flex;flex-wrap:wrap;gap:9px;margin-top:4px;}
+  .fact{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);
+    border-radius:6px;padding:9px 14px;font-size:13px;}
+  .fact b{display:block;font-size:10.5px;color:#a9c2d6;text-transform:uppercase;letter-spacing:.7px;margin-bottom:2px;font-weight:600;}
+
+  /* Layout */
+  .wrap{max-width:1180px;margin:0 auto;padding:0 22px 70px;}
+  nav.toc{position:sticky;top:53px;z-index:50;background:var(--white);border-bottom:1px solid var(--line);
+    display:flex;flex-wrap:wrap;gap:4px;padding:9px 12px;box-shadow:0 2px 8px rgba(18,38,58,.04);}
+  nav.toc a{font-size:12.5px;color:var(--muted);padding:6px 11px;border-radius:4px;font-weight:500;}
+  nav.toc a:hover{background:var(--tint);color:var(--navy-deep);text-decoration:none;}
+
+  section{background:var(--white);margin:20px 0;padding:28px 32px;border-radius:6px;
+    border:1px solid var(--line);box-shadow:var(--shadow);scroll-margin-top:116px;}
+  section h2{font-size:22px;margin:0 0 4px;color:var(--navy-deep);font-weight:600;display:flex;align-items:center;gap:11px;}
+  section h2 .num{background:var(--navy);color:#fff;width:29px;height:29px;border-radius:4px;
+    display:inline-flex;align-items:center;justify-content:center;font-size:14.5px;font-weight:600;flex:0 0 auto;}
+  .toplink{margin-left:auto;flex:0 0 auto;font-size:11.5px;font-weight:600;letter-spacing:.3px;
+    color:var(--navy);display:inline-flex;align-items:center;gap:5px;padding:5px 12px;
+    border:1px solid var(--border-accent);border-radius:4px;background:var(--tint);}
+  .toplink:hover{background:var(--navy);color:#fff;border-color:var(--navy);text-decoration:none;}
+  section > p.lead{color:var(--muted);margin:6px 0 20px;font-size:15px;max-width:960px;}
+  h3{font-size:16px;color:var(--navy);margin:26px 0 10px;font-weight:600;}
+  h4{font-size:13.5px;margin:18px 0 8px;color:var(--ink);text-transform:uppercase;letter-spacing:.6px;}
+
+  table{width:100%;border-collapse:collapse;margin:12px 0 8px;font-size:13.5px;}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;}
+  th{background:var(--navy-deep);color:#fff;font-weight:600;font-size:12.5px;letter-spacing:.3px;}
+  tr:nth-child(even) td{background:var(--soft);}
+  td.rec{border-left:3px solid var(--navy);}
+  .pill{display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:3px;line-height:1.6;}
+  .pill.rec{background:var(--navy);color:#fff;}
+  .pill.free{background:#eef5f0;color:var(--ok);border:1px solid #c3ddcd;}
+  .pill.key{background:#f8f3e4;color:var(--warn);border:1px solid #e4d6ab;}
+  .pill.proto{background:var(--tint);color:var(--navy-deep);border:1px solid var(--border-accent);}
+  .pill.prod{background:var(--gold-tint);color:var(--gold);border:1px solid var(--gold-border);}
+  .pill.t{background:var(--navy);color:#fff;margin:1px;}
+
+  ul.tight{margin:8px 0;padding-left:20px;}
+  ul.tight li{margin:5px 0;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  .card{border:1px solid var(--line);border-radius:5px;padding:16px 18px;background:#fff;}
+  .card.in{border-left:4px solid var(--ok);}
+  .card.out{border-left:4px solid var(--risk);}
+  .card h4{margin-top:0;}
+  .callout{background:var(--tint);border:1px solid var(--border-accent);border-radius:5px;padding:16px 18px;margin:16px 0;}
+  .callout b{color:var(--navy-deep);}
+
+  .diagram{width:100%;overflow-x:auto;border:1px solid var(--line);border-radius:5px;background:#fff;padding:10px;}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin:12px 2px 0;font-size:12.5px;color:var(--muted);}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .swatch{width:14px;height:14px;border-radius:2px;display:inline-block;}
+
+  .risk-grp{border-left:4px solid var(--navy);padding-left:16px;margin:16px 0;}
+  .sev{font-weight:600;}
+  .sev.h{color:var(--risk);} .sev.m{color:var(--warn);} .sev.l{color:var(--ok);}
+
+  .prov{font-size:13px;color:var(--muted);}
+  .srcbox{background:var(--soft);border:1px solid var(--line);border-left:4px solid var(--navy);
+    border-radius:5px;padding:14px 18px;margin:14px 0 0;font-size:13px;color:var(--muted);}
+  .srcbox b{color:var(--navy-deep);}
+  .srcbox a{word-break:break-all;}
+  .acr{columns:3;column-gap:26px;font-size:13px;}
+  .acr div{break-inside:avoid;margin:4px 0;}
+  .acr b{color:var(--navy-deep);}
+  footer{max-width:1180px;margin:0 auto;padding:10px 22px 50px;color:#7d8894;font-size:12px;}
+  footer a{color:#5c6b7a;}
+
+  @media(max-width:820px){
+    .grid2,.grid3{grid-template-columns:1fr;}
+    .acr{columns:1;}
+    .hero h1{font-size:26px;}
+    .docbar{flex-direction:column;align-items:flex-start;gap:4px;}
+    .docbar .tag{text-align:left;}
+  }
+  @media print{
+    body{background:#fff;}
+    .docbar,nav.toc{position:static;box-shadow:none;}
+    section{box-shadow:none;border:1px solid var(--line);break-inside:avoid;}
+    .hero{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    th{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    nav.toc{display:none;}
+    .toplink{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<span id="top" aria-hidden="true"></span>
+<div class="docbar">
+  <div class="docmark">AFCENT Weather Intelligence SaaS<span class="sep">|</span><span class="lt">Prototype Blueprint</span></div>
+  <div class="tag">Public information · Solicitation FA480326Q0096</div>
+</div>
+
+<header class="hero">
+  <h1>AFCENT Weather Intelligence SaaS<br>Prototype Architecture &amp; Technology Analysis</h1>
+  <p class="sub">A locally-runnable prototype blueprint responding to U.S. Air Force solicitation
+  <b>FA480326Q0096 — Commercial Cloud-Based Weather Intelligence Service</b>, with a documented path to a containerized AWS production platform.</p>
+  <p class="src">Prepared from publicly available information published on SAM.gov —
+  <a href="https://sam.gov/opp/eeb836b063ad42a3a856afcc0be7b4bb/view" target="_blank" rel="noopener">https://sam.gov/opp/eeb836b063ad42a3a856afcc0be7b4bb/view</a></p>
+  <div class="facts">
+    <div class="fact"><b>Solicitation</b>FA480326Q0096</div>
+    <div class="fact"><b>Customer</b>AFCENT / USCENTCOM</div>
+    <div class="fact"><b>Issuing Office</b>20 CONS, Shaw AFB, SC</div>
+    <div class="fact"><b>Place of Performance</b>386 AEW, Ali Al Salem AB, Kuwait</div>
+    <div class="fact"><b>NAICS / PSC</b>513210 / DA10</div>
+    <div class="fact"><b>Contract Type</b>Firm-Fixed-Price</div>
+    <div class="fact"><b>Period</b>3-mo base + 3-mo + 6-mo options</div>
+    <div class="fact"><b>Est. Value</b>~$2M</div>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#understanding">1 · Requirement</a>
+  <a href="#architecture">2 · 3-Layer Architecture</a>
+  <a href="#context">3 · System Context</a>
+  <a href="#stack">4 · Tech Stack &amp; Analysis</a>
+  <a href="#scope">5 · Prototype Scope</a>
+  <a href="#mvp">6 · MVP Roadmap</a>
+  <a href="#scaling">7 · Scaling to Production</a>
+  <a href="#risks">8 · Limits, Assumptions, Risks</a>
+  <a href="#data">9 · Public Data Sources</a>
+  <a href="#appendix">10 · Appendix</a>
+</nav>
+
+<div class="wrap">
+
+<!-- 1. REQUIREMENT -->
+<section id="understanding">
+  <h2><span class="num">1</span>Understanding the Requirement<a href="#top" class="toplink" aria-label="Back to top">&#8593; Top</a></h2>
+  <p class="lead">AFCENT (the air component of USCENTCOM) currently relies on disparate weather systems that hamper data fusion,
+  accessibility, and operational tempo across an austere, high-stakes area of responsibility. The Performance Work Statement (PWS)
+  seeks a fully-managed, commercially-hosted <b>Weather Intelligence SaaS</b> — accessed over NIPRNet via browser, delivering
+  decision-quality METOC intelligence, with classified-enclave parity achieved by pushing data products through a Government
+  Cross-Domain Solution (CDS). The five specific tasks below drive every design decision in this document.</p>
+
+  <table>
+    <thead><tr><th style="width:130px">PWS Task</th><th>What the Government requires</th><th style="width:220px">Key performance targets</th></tr></thead>
+    <tbody>
+      <tr><td class="rec"><b>Task 1</b><br>Global AI-Native Prediction</td>
+        <td>Proprietary AI-native global atmospheric model with independent data assimilation (LEO passive-microwave sounders + geostationary + institutional NWP), producing a unified multi-sensor merged precipitation product and <b>fully probabilistic</b> forecasts.</td>
+        <td>25&nbsp;km global / sub-10&nbsp;km regional; global refresh ≤6&nbsp;h, regional hourly; <b>≥60 data layers</b> (core wx, clouds, WBGT, maritime, air quality, Land Information System, flood, aviation).</td></tr>
+      <tr><td class="rec"><b>Task 2</b><br>Hi-Res Regional Model</td>
+        <td>Convection-permitting hyper-local probabilistic ensemble over the CENTCOM AOR (Middle East, Arabian Peninsula, East Africa, South Asia).</td>
+        <td>3&nbsp;km grid; <b>15-min output cadence</b>; 36-h horizon.</td></tr>
+      <tr><td class="rec"><b>Task 3</b><br>Decision Logic Engine</td>
+        <td>Configurable rules engine letting planners define mission thresholds (rotary-wing wind limits, convoy visibility minimums, etc.); continuously evaluates forecasts and emits structured machine-readable alert objects.</td>
+        <td>Custom thresholds by mission/platform/phase; alerts &amp; insights delivered via authenticated API in <b>JSON / GeoJSON</b>.</td></tr>
+      <tr><td class="rec"><b>Task 4</b><br>Severe-Weather Detection</td>
+        <td>Continuous, operator-independent AOR-wide monitoring for environmental shaping events.</td>
+        <td>Pre-built detections: blowing dust/sand, extreme heat/cold, heavy precip, thunderstorms &amp; convective wind, hail, tornado, fog, significant sea state.</td></tr>
+      <tr><td class="rec"><b>Task 5</b><br>Integration &amp; Support</td>
+        <td>Secure authenticated APIs (REST / GraphQL); unclassified-vs-classified product parity via Government CDS to SIPR/JWICS/C2; RMF/ATO-aligned artifacts; virtual onboarding &amp; training.</td>
+        <td>HTTPS/443; JSON &amp; GeoJSON; <b>99.9% monthly uptime</b> SLA; IOC in 14 days, regional FOC in 30 days.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="grid2" style="margin-top:18px;">
+    <div class="callout">
+      <b>Cross-cutting UX mandate.</b> The live technical demonstration is scored on a
+      <b>map-centric, intuitive "no-code / low-code" interface</b> that lets a non-technical planner set up a custom
+      alert and generate a mission-specific forecast — and on how clearly the platform communicates
+      <b>model bias and operational impact</b> to both expert forecasters and general operational planners.
+    </div>
+    <div class="callout">
+      <b>Q&amp;A relaxations (Amendment / Q&amp;A #2).</b> The strict FedRAMP hosting requirement was <b>removed</b> —
+      a standard commercial cloud with industry-standard security is acceptable; the <b>Government sponsors CDS/ATO
+      ingestion</b> (no pre-existing transferable DoD ATO required to bid); a phased IOC→FOC delivery is allowed; and the
+      live demo is conducted <b>virtually via Microsoft Teams</b>.
+    </div>
+  </div>
+
+  <div class="callout" style="background:#fff;border:1px dashed var(--border-accent);">
+    <b>Prototype thesis.</b> We cannot reproduce a proprietary AI-NWP model or classified networks on a laptop — nor do we need to
+    to win the demo. The prototype proves the <b>decisive, scoreable capabilities</b>: a map-centric no-code experience, a working
+    threshold/rules engine that emits machine-readable GeoJSON alerts, severe-weather detection over the CENTCOM AOR, probabilistic
+    display with plain-language operational-impact translation, and a mock "CDS export payload" that demonstrates the classified
+    integration contract — all powered by <b>free public weather data</b> (Section 8).
+  </div>
+</section>
+
+<!-- 2. ARCHITECTURE -->
+<section id="architecture">
+  <h2><span class="num">2</span>Three-Layer Architecture<a href="#top" class="toplink" aria-label="Back to top">&#8593; Top</a></h2>
+  <p class="lead">A classic three-tier separation — presentation (React&nbsp;+&nbsp;Vite), a middle API/logic layer (Python&nbsp;FastAPI),
+  and persistence (SQLite) — chosen so the same shape scales cleanly to the AWS production design in Section&nbsp;6. The scheduler
+  pulls public data on the PWS refresh cadences; the rules engine turns forecasts into alert objects served as JSON/GeoJSON.</p>
+
+  <div class="diagram">
+  <svg viewBox="0 0 1120 560" width="100%" role="img" aria-label="Three-layer architecture diagram" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif">
+    <defs>
+      <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L8,3 L0,6 Z" fill="#2d5c86"/>
+      </marker>
+      <style>
+        .lbl{font-size:11px;fill:#5c6b7a;}
+        .box{fill:#ffffff;stroke:#c3d4e2;stroke-width:1.5;rx:5;}
+        .comp{font-size:12px;fill:#1b2733;font-weight:600;}
+        .sub{font-size:10px;fill:#5c6b7a;}
+        .layerttl{font-size:13px;font-weight:700;fill:#12263a;}
+        .flow{stroke:#2d5c86;stroke-width:2;fill:none;marker-end:url(#ah);}
+      </style>
+    </defs>
+
+    <!-- Layer bands -->
+    <rect x="20" y="20" width="1080" height="150" rx="6" fill="#eef3f7" stroke="#c3d4e2"/>
+    <rect x="20" y="196" width="1080" height="184" rx="6" fill="#f7f9fb" stroke="#c3d4e2"/>
+    <rect x="20" y="406" width="1080" height="132" rx="6" fill="#eef3f7" stroke="#c3d4e2"/>
+
+    <text x="38" y="44" class="layerttl">FRONTEND · Presentation Layer</text>
+    <text x="300" y="44" class="lbl">React 18 + TypeScript, built with Vite · runs in NIPRNet browser</text>
+    <text x="38" y="220" class="layerttl">MIDDLE · API &amp; Logic Layer</text>
+    <text x="300" y="220" class="lbl">Python FastAPI (ASGI/Uvicorn) · REST + GeoJSON · APScheduler</text>
+    <text x="38" y="430" class="layerttl">BACKEND · Persistence Layer</text>
+    <text x="300" y="430" class="lbl">SQLite (+ SpatiaLite) — file-based, zero-install for local demo</text>
+
+    <!-- Frontend components -->
+    <g>
+      <rect class="box" x="40" y="58" width="200" height="94" rx="5"/>
+      <text class="comp" x="56" y="82">Map-Centric Workspace</text>
+      <text class="sub" x="56" y="100">MapLibre GL · layer toggles</text>
+      <text class="sub" x="56" y="116">CENTCOM AOR basemap</text>
+      <text class="sub" x="56" y="132">deck.gl overlays</text>
+
+      <rect class="box" x="256" y="58" width="200" height="94" rx="5"/>
+      <text class="comp" x="272" y="82">No-Code Alert Builder</text>
+      <text class="sub" x="272" y="100">threshold wizard</text>
+      <text class="sub" x="272" y="116">mission / platform presets</text>
+      <text class="sub" x="272" y="132">plain-language rules</text>
+
+      <rect class="box" x="472" y="58" width="210" height="94" rx="5"/>
+      <text class="comp" x="488" y="82">Probabilistic Panels</text>
+      <text class="sub" x="488" y="100">ensemble spread · Recharts</text>
+      <text class="sub" x="488" y="116">model-bias indicators</text>
+      <text class="sub" x="488" y="132">operational-impact cards</text>
+
+      <rect class="box" x="698" y="58" width="182" height="94" rx="5"/>
+      <text class="comp" x="714" y="82">Alerts Console</text>
+      <text class="sub" x="714" y="100">live severe-wx feed</text>
+      <text class="sub" x="714" y="116">acknowledge / triage</text>
+
+      <rect class="box" x="896" y="58" width="184" height="94" rx="5"/>
+      <text class="comp" x="912" y="82">CDS Export Preview</text>
+      <text class="sub" x="912" y="100">mock SIPR/JWICS</text>
+      <text class="sub" x="912" y="116">payload inspector</text>
+    </g>
+
+    <!-- API components -->
+    <g>
+      <rect class="box" x="40" y="238" width="188" height="122" rx="5"/>
+      <text class="comp" x="56" y="262">Ingestion Adapters</text>
+      <text class="sub" x="56" y="280">Open-Meteo, NWS,</text>
+      <text class="sub" x="56" y="296">GFS/GEFS, GIBS…</text>
+      <text class="sub" x="56" y="312">httpx · retry/backoff</text>
+      <text class="sub" x="56" y="336">normalize → GeoJSON</text>
+
+      <rect class="box" x="244" y="238" width="188" height="122" rx="5"/>
+      <text class="comp" x="260" y="262">Normalization /</text>
+      <text class="comp" x="260" y="278">METOC Service</text>
+      <text class="sub" x="260" y="298">xarray · shapely</text>
+      <text class="sub" x="260" y="314">unit &amp; grid harmonize</text>
+      <text class="sub" x="260" y="336">derive WBGT, indices</text>
+
+      <rect class="box" x="448" y="238" width="196" height="122" rx="5" fill="#eef3f7" stroke="#1f4468"/>
+      <text class="comp" x="464" y="262">Rules / Threshold</text>
+      <text class="comp" x="464" y="278">Engine</text>
+      <text class="sub" x="464" y="298">evaluate active rules</text>
+      <text class="sub" x="464" y="314">vs forecast fields</text>
+      <text class="sub" x="464" y="336">emit alert objects</text>
+
+      <rect class="box" x="660" y="238" width="188" height="122" rx="5"/>
+      <text class="comp" x="676" y="262">Alert Generator</text>
+      <text class="sub" x="676" y="280">structured GeoJSON</text>
+      <text class="sub" x="676" y="296">severity + impact text</text>
+      <text class="sub" x="676" y="312">CDS payload builder</text>
+
+      <rect class="box" x="864" y="238" width="216" height="122" rx="5"/>
+      <text class="comp" x="880" y="262">API Gateway (FastAPI)</text>
+      <text class="sub" x="880" y="280">REST · OpenAPI docs</text>
+      <text class="sub" x="880" y="296">token auth · CORS · HTTPS</text>
+      <text class="sub" x="880" y="312">Pydantic validation</text>
+      <text class="sub" x="880" y="336">APScheduler (refresh jobs)</text>
+    </g>
+
+    <!-- Backend components -->
+    <g>
+      <rect class="box" x="40" y="446" width="200" height="80" rx="5"/>
+      <text class="comp" x="56" y="472">Forecast Cache</text>
+      <text class="sub" x="56" y="490">time-series grids</text>
+      <text class="sub" x="56" y="506">TTL by refresh cadence</text>
+
+      <rect class="box" x="256" y="446" width="200" height="80" rx="5"/>
+      <text class="comp" x="272" y="472">Alert Rules &amp; AOIs</text>
+      <text class="sub" x="272" y="490">user-defined thresholds</text>
+      <text class="sub" x="272" y="506">areas of interest (geom)</text>
+
+      <rect class="box" x="472" y="446" width="210" height="80" rx="5"/>
+      <text class="comp" x="488" y="472">Generated Alerts</text>
+      <text class="sub" x="488" y="490">machine-readable log</text>
+      <text class="sub" x="488" y="506">export history</text>
+
+      <rect class="box" x="698" y="446" width="200" height="80" rx="5"/>
+      <text class="comp" x="714" y="472">Reference / Config</text>
+      <text class="sub" x="714" y="490">layers, presets, users</text>
+      <text class="sub" x="714" y="506">audit trail</text>
+    </g>
+
+    <!-- Flows -->
+    <path class="flow" d="M600,196 L600,163"/>
+    <text class="lbl" x="608" y="184">HTTPS · REST · JSON/GeoJSON</text>
+    <path class="flow" d="M560,406 L560,362"/>
+    <text class="lbl" x="568" y="396">SQL reads / writes</text>
+    <path class="flow" d="M972,238 L972,200 L972,196" />
+  </svg>
+  </div>
+  <div class="legend">
+    <span><span class="swatch" style="background:#eef3f7;border:1px solid #c3d4e2;"></span>Layer band</span>
+    <span><span class="swatch" style="background:#fff;border:1px solid #c3d4e2;"></span>Component</span>
+    <span><span class="swatch" style="background:#eef3f7;border:1px solid #1f4468;"></span>Core differentiator (rules engine)</span>
+    <span><span class="swatch" style="background:#2d5c86;"></span>Data flow</span>
+  </div>
+</section>
+
+<!-- 3. SYSTEM CONTEXT -->
+<section id="context">
+  <h2><span class="num">3</span>System Context &amp; Integration Points<a href="#top" class="toplink" aria-label="Back to top">&#8593; Top</a></h2>
+  <p class="lead">The platform sits between public environmental-data providers (ingest) and Government consumers (NIPRNet browser
+  users and, in production, the classified enclaves reached through a Government-operated Cross-Domain Solution). Solid links are
+  <span class="pill proto">live in prototype</span>; dashed links are <span class="pill prod">production-only</span> (mocked locally).</p>
+
+  <div class="diagram">
+  <svg viewBox="0 0 1120 520" width="100%" role="img" aria-label="System context diagram" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif">
+    <defs>
+      <marker id="ah2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L8,3 L0,6 Z" fill="#2d5c86"/></marker>
+      <marker id="ah3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L8,3 L0,6 Z" fill="#8a6d2f"/></marker>
+      <style>
+        .t{font-size:12px;fill:#1b2733;font-weight:600;}
+        .s{font-size:10px;fill:#5c6b7a;}
+        .ll{font-size:10.5px;fill:#5c6b7a;}
+        .live{stroke:#2d5c86;stroke-width:2.2;fill:none;marker-end:url(#ah2);}
+        .prod{stroke:#8a6d2f;stroke-width:2;fill:none;stroke-dasharray:6 5;marker-end:url(#ah3);}
+      </style>
+    </defs>
+
+    <!-- Central platform -->
+    <rect x="410" y="196" width="300" height="128" rx="6" fill="#12263a"/>
+    <text x="560" y="232" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">Weather Intelligence SaaS</text>
+    <text x="560" y="254" text-anchor="middle" fill="#cfdce8" font-size="11">React + FastAPI + SQLite</text>
+    <text x="560" y="276" text-anchor="middle" fill="#cfdce8" font-size="11">Rules engine · alerting · APIs</text>
+    <text x="560" y="298" text-anchor="middle" fill="#a8bccd" font-size="10">(AWS commercial cloud in production)</text>
+
+    <!-- Left: public data sources -->
+    <rect x="30" y="40" width="250" height="150" rx="6" fill="#fff" stroke="#c3d4e2" stroke-width="1.5"/>
+    <text x="46" y="64" class="t">Public Environmental Data</text>
+    <text x="46" y="84" class="s">Open-Meteo · NOAA NWS / GFS / GEFS</text>
+    <text x="46" y="102" class="s">ECMWF Open Data / AIFS · NOAA HRRR</text>
+    <text x="46" y="120" class="s">NASA GPM IMERG · GIBS · GOES</text>
+    <text x="46" y="138" class="s">Copernicus CAMS (dust) · OpenAQ</text>
+    <text x="46" y="156" class="s">Copernicus Marine · ERA5 · NASA POWER</text>
+    <text x="46" y="176" class="s">HTTPS REST / GRIB2 / NetCDF / WMTS</text>
+
+    <!-- Left bottom: Gov furnished -->
+    <rect x="30" y="330" width="250" height="128" rx="6" fill="#fff" stroke="#c3d4e2" stroke-width="1.5"/>
+    <text x="46" y="354" class="t">Government-Furnished (GFP)</text>
+    <text x="46" y="374" class="s">CDS drop-point specs &amp; formats</text>
+    <text x="46" y="392" class="s">API access specs for C2 systems</text>
+    <text x="46" y="410" class="s">Security credentials / MFA · DD-254</text>
+    <text x="46" y="430" class="s">NIPRNet landing-zone details</text>
+    <text x="46" y="448" class="s">(mocked as config in prototype)</text>
+
+    <!-- Right top: users -->
+    <rect x="840" y="40" width="250" height="150" rx="6" fill="#fff" stroke="#c3d4e2" stroke-width="1.5"/>
+    <text x="856" y="64" class="t">AFCENT Users (NIPRNet)</text>
+    <text x="856" y="86" class="s">METOC forecaster — expert view</text>
+    <text x="856" y="106" class="s">Operational planner — no-code alerts</text>
+    <text x="856" y="126" class="s">Watch officer — severe-wx console</text>
+    <text x="856" y="146" class="s">Admin — users, layers, audit</text>
+    <text x="856" y="170" class="s">Secure web browser · HTTPS/443</text>
+
+    <!-- Right bottom: classified -->
+    <rect x="840" y="330" width="250" height="128" rx="6" fill="#f7f2e6" stroke="#ddd0b0" stroke-width="1.5"/>
+    <text x="856" y="354" class="t">Classified Enclaves</text>
+    <text x="856" y="374" class="s">SIPRNet · JWICS · C2 systems</text>
+    <text x="856" y="392" class="s">via Government Cross-Domain</text>
+    <text x="856" y="410" class="s">Solution (CDS)</text>
+    <text x="856" y="430" class="s">unclassified ⇄ classified</text>
+    <text x="856" y="448" class="s">product parity required</text>
+
+    <!-- CDS node -->
+    <rect x="470" y="392" width="180" height="60" rx="5" fill="#fff" stroke="#8a6d2f" stroke-width="1.6"/>
+    <text x="560" y="418" text-anchor="middle" class="t" fill="#8a6d2f">Cross-Domain Solution</text>
+    <text x="560" y="436" text-anchor="middle" class="s">Government-operated drop point</text>
+
+    <!-- Flows -->
+    <path class="live" d="M280,120 C 340,150 360,200 408,232"/>
+    <text x="300" y="185" class="ll">ingest (pull)</text>
+
+    <path class="live" d="M712,240 C 780,180 810,140 838,118"/>
+    <text x="742" y="205" class="ll">web app · JSON/GeoJSON API</text>
+
+    <path class="prod" d="M280,392 C 340,360 360,340 452,320"/>
+    <text x="292" y="352" class="ll">GFP config</text>
+
+    <path class="live" d="M560,324 L560,390"/>
+    <text x="568" y="360" class="ll">build CDS payload</text>
+
+    <path class="prod" d="M650,420 C 760,420 800,400 838,398"/>
+    <text x="690" y="410" class="ll">push to classified</text>
+  </svg>
+  </div>
+  <div class="legend">
+    <span><span class="swatch" style="background:#2d5c86;"></span>Live in prototype</span>
+    <span><span class="swatch" style="background:#8a6d2f;"></span>Production-only (dashed, mocked locally)</span>
+    <span><span class="swatch" style="background:#12263a;"></span>Platform under test</span>
+  </div>
+</section>
+
+<!-- 4. TECH STACK -->
+<section id="stack">
+  <h2><span class="num">4</span>Recommended Tech Stack &amp; Comparative Analysis<a href="#top" class="toplink" aria-label="Back to top">&#8593; Top</a></h2>
+  <p class="lead">Every choice optimizes for the same four things: <b>zero immediate cost</b>, <b>runs on a laptop today</b>,
+  <b>clean path to AWS production</b>, and <b>fit to the PWS capabilities</b>. Recommended options are marked
+  <span class="pill rec">Recommended</span>.</p>
+
+  <h3>Frontend — Presentation Layer</h3>
+  <table>
+    <thead><tr><th style="width:150px">Concern</th><th style="width:150px">Recommendation</th><th>Alternatives considered</th><th style="width:300px">Rationale</th></tr></thead>
+    <tbody>
+      <tr><td>Framework &amp; tooling</td><td class="rec"><span class="pill rec">React 18 + TypeScript + Vite</span></td>
+        <td>Create-React-App (deprecated, slow); Next.js (SSR overkill for an internal SPA); Angular; Vue</td>
+        <td>Vite gives instant HMR and tiny config; TS enforces contract safety against GeoJSON payloads; huge hiring pool; builds to static assets that drop straight onto S3+CloudFront.</td></tr>
+      <tr><td>Mapping engine</td><td class="rec"><span class="pill rec">MapLibre GL JS</span></td>
+        <td>Leaflet (raster-first, weaker vector/3D); Cesium (3D globe, heavier); Mapbox GL (license cost)</td>
+        <td>Open-source, no token/cost, vector tiles + WebGL performance for layer toggling; free basemaps; production-identical.</td></tr>
+      <tr><td>Data-layer overlays</td><td class="rec"><span class="pill rec">deck.gl</span></td>
+        <td>Native MapLibre layers; D3 canvas</td>
+        <td>GPU-accelerated rendering of large grids/heatmaps &amp; GeoJSON alert polygons over the AOR.</td></tr>
+      <tr><td>Charts (probabilistic)</td><td class="rec"><span class="pill rec">Recharts</span></td>
+        <td>Chart.js; Plotly (heavy); ECharts</td>
+        <td>Declarative React charts for ensemble spread / meteograms with minimal code.</td></tr>
+      <tr><td>State &amp; data fetching</td><td class="rec"><span class="pill rec">TanStack Query + Zustand</span></td>
+        <td>Redux Toolkit; Context only</td>
+        <td>Query handles caching/refetch on refresh cadence; Zustand keeps UI state light.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Middle — API &amp; Logic Layer</h3>
+  <table>
+    <thead><tr><th style="width:150px">Concern</th><th style="width:150px">Recommendation</th><th>Alternatives considered</th><th style="width:300px">Rationale</th></tr></thead>
+    <tbody>
+      <tr><td>API framework</td><td class="rec"><span class="pill rec">Python 3.12 + FastAPI</span></td>
+        <td>Flask (less native async/validation); Django REST (heavy ORM/admin); Node/Express (splits language from data-science libs)</td>
+        <td>Async ASGI performance; Pydantic validation + auto OpenAPI docs (great for the API-schema deliverable &amp; live demo); same language as the meteorological/geo libraries.</td></tr>
+      <tr><td>Geospatial / METOC</td><td class="rec"><span class="pill rec">xarray + rasterio/GDAL + shapely + pandas</span></td>
+        <td>Pure NumPy; PostGIS-only logic</td>
+        <td>xarray is the de-facto standard for gridded NWP (NetCDF/GRIB via cfgrib); shapely for AOI geometry &amp; point-in-polygon rule evaluation.</td></tr>
+      <tr><td>Scheduler</td><td class="rec"><span class="pill rec">APScheduler</span></td>
+        <td>Celery + broker (needs Redis/RabbitMQ); cron</td>
+        <td>In-process jobs on PWS cadences (6-h global / hourly / 15-min) with zero extra infrastructure locally.</td></tr>
+      <tr><td>Rules engine</td><td class="rec"><span class="pill rec">Custom rule model + JSON-logic evaluation</span></td>
+        <td>Drools (JVM); commercial BRMS</td>
+        <td>Lightweight, transparent, serializable rules the no-code UI can author; emits GeoJSON alert objects directly.</td></tr>
+      <tr><td>HTTP client / server</td><td class="rec"><span class="pill rec">httpx + Uvicorn</span></td>
+        <td>requests (sync); gunicorn</td>
+        <td>Async ingestion with retry/backoff; Uvicorn for local ASGI, gunicorn+uvicorn workers in prod.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Backend — Persistence Layer</h3>
+  <table>
+    <thead><tr><th style="width:150px">Concern</th><th style="width:150px">Recommendation</th><th>Alternatives considered</th><th style="width:300px">Rationale</th></tr></thead>
+    <tbody>
+      <tr><td>Local database</td><td class="rec"><span class="pill rec">SQLite + SpatiaLite</span></td>
+        <td>DuckDB (analytics, weaker geo/OLTP); PostgreSQL/PostGIS (heavier local setup)</td>
+        <td>Zero-install single-file DB — perfect for a laptop demo; SpatiaLite adds spatial predicates; SQLAlchemy models port to Postgres unchanged.</td></tr>
+      <tr><td>ORM / migrations</td><td class="rec"><span class="pill rec">SQLAlchemy 2 + Alembic</span></td>
+        <td>Raw SQL; Tortoise ORM</td>
+        <td>One data-model definition works on SQLite locally and RDS PostgreSQL in production; Alembic manages schema evolution.</td></tr>
+      <tr><td>Gridded-data storage</td><td class="rec"><span class="pill rec">Local files (NetCDF/Zarr) + SQLite index</span></td>
+        <td>BLOBs in DB</td>
+        <td>Keeps large arrays on disk (xarray-friendly) with SQLite holding metadata/pointers — mirrors the S3+Zarr production data lake.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 5. SCOPE -->
+<section id="scope">
+  <h2><span class="num">5</span>Prototype Scope (Local, Zero-Cost)<a href="#top" class="toplink" aria-label="Back to top">&#8593; Top</a></h2>
+  <p class="lead">The prototype runs entirely on a laptop with free/open-source tooling and free public data. It demonstrates the
+  <b>scoreable demo capabilities</b> end-to-end while transparently mocking anything that requires classified networks, GPUs, or
+  proprietary models.</p>
+
+  <div class="grid2">
+    <div class="card in">
+      <h4 style="color:var(--ok)">✓ In Scope — Built &amp; Demonstrated</h4>
+      <ul class="tight">
+        <li><b>Map-centric workspace</b> over the CENTCOM AOR with toggleable weather &amp; satellite layers.</li>
+        <li><b>No-code alert builder</b> — a wizard where a planner sets thresholds (e.g., surface wind &gt; 25 kt, visibility &lt; 3 mi, WBGT &gt; 88°F) tied to mission presets.</li>
+        <li><b>Rules / threshold engine</b> that continuously evaluates ingested forecasts and generates <b>machine-readable GeoJSON alert objects</b>.</li>
+        <li><b>Severe-weather detections</b> — demo rules for blowing dust/sand, extreme heat, convective storms &amp; fog across the AOR.</li>
+        <li><b>Probabilistic display</b> — ensemble spread &amp; likelihood, with <b>plain-language operational-impact</b> and model-bias cues for non-experts.</li>
+        <li><b>Authenticated REST API</b> serving forecasts, rules &amp; alerts as JSON/GeoJSON (OpenAPI docs live).</li>
+        <li><b>Mock CDS export</b> — a payload inspector showing exactly what would be pushed to SIPR/JWICS, proving the integration contract.</li>
+        <li>Scheduler polling public sources on representative cadences; SQLite persistence of rules, AOIs &amp; alert history.</li>
+      </ul>
+    </div>
+    <div class="card out">
+      <h4 style="color:var(--risk)">✗ Out of Scope — Represented / Mocked</h4>
+      <ul class="tight">
+        <li><b>Proprietary AI-native global model</b> with LEO passive-microwave assimilation — substituted with public NWP/AI-model outputs (GFS/GEFS, ECMWF AIFS).</li>
+        <li><b>True 3 km / 15-min convection-permitting ensemble</b> — approximated with best-available public resolution; full fidelity needs GPU compute.</li>
+        <li>Full <b>≥60 data layers</b> — a representative subset is wired; the layer framework is extensible.</li>
+        <li><b>Classified networks &amp; live CDS</b> (SIPR/JWICS) — represented by the mock export payload only.</li>
+        <li><b>Production authentication</b> (CAC/PKI, SSO) — a simple token/login stands in.</li>
+        <li><b>ATO/RMF accreditation, 99.9% SLA, HA</b> — design-only; not exercised locally.</li>
+        <li>Real-time <b>global 6-h refresh at 25 km</b> continuous operations — demo runs on-demand / scheduled samples.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout">
+    <b>Local run shape.</b> Two processes: <code>uvicorn app.main:app</code> (FastAPI on :8000) and <code>npm run dev</code>
+    (Vite on :5173, proxying <code>/api</code>). SQLite file created on first run; APScheduler seeds an initial data pull.
+    A future step can wrap both in <code>docker compose</code> to mirror the ECS task definitions used in production.
+  </div>
+</section>
+
+<!-- 6. MVP ROADMAP -->
+<section id="mvp">
+  <h2><span class="num">6</span>MVP Roadmap &amp; Integration Path<a href="#top" class="toplink" aria-label="Back to top">&#8593; Top</a></h2>
+  <p class="lead">Rather than one monolithic build, the platform is decomposed into <b>independently valuable MVPs</b> — each a vertical
+  slice mapping to one or more PWS tasks, delivered in a sequence that hits the <b>14-day IOC / 30-day FOC</b> milestones and then
+  matures toward full operational capability. Every MVP is loosely coupled through a <b>shared JSON/GeoJSON contract</b>, so later
+  slices (higher-resolution models, the real AI engine, the classified gateway) plug in <b>without reworking the UI or the earlier MVPs</b>.</p>
+
+  <table>
+    <thead><tr>
+      <th style="width:190px">MVP</th><th>Capability</th>
+      <th style="width:90px">PWS</th><th style="width:120px">Horizon</th>
+      <th style="width:130px">Depends on</th><th style="width:250px">Integration seam</th>
+    </tr></thead>
+    <tbody>
+      <tr><td class="rec"><b>MVP-1</b><br>Map-Centric METOC Viewer</td>
+        <td>Interactive CENTCOM-AOR map with toggleable public weather &amp; satellite layers (read-only visualization).</td>
+        <td><span class="pill t">1</span></td><td><span class="pill rec">IOC · ≤14d</span></td><td>— (foundation)</td>
+        <td>Establishes the frontend shell &amp; <b>layer framework</b> every later MVP renders into.</td></tr>
+      <tr><td class="rec"><b>MVP-2</b><br>No-Code Threshold &amp; Alerting Engine</td>
+        <td>Rule-builder UI + FastAPI rules engine + SQLite; emits machine-readable <b>GeoJSON alert objects</b>.</td>
+        <td><span class="pill t">3</span></td><td><span class="pill rec">IOC → FOC</span></td><td>MVP-1</td>
+        <td>Introduces the backend &amp; the <b>canonical alert-object schema</b> reused platform-wide.</td></tr>
+      <tr><td class="rec"><b>MVP-3</b><br>Probabilistic &amp; Impact Panels</td>
+        <td>Ensemble spread/likelihood display with plain-language operational impact and model-bias cues.</td>
+        <td><span class="pill t">1</span></td><td><span class="pill proto">FOC · ≤30d</span></td><td>MVP-1</td>
+        <td>Panels bind to map selection and consume the shared <b>forecast service</b>.</td></tr>
+      <tr><td class="rec"><b>MVP-4</b><br>Severe-Weather Detection Packs</td>
+        <td>Prebuilt AOR-wide detections (dust/sand, extreme heat, convection, fog) shipped as rule packs.</td>
+        <td><span class="pill t">4</span></td><td><span class="pill proto">FOC · ≤30d</span></td><td>MVP-2</td>
+        <td>Ships as preconfigured rules on MVP-2's engine; adds CAMS/GOES feeds.</td></tr>
+      <tr><td class="rec"><b>MVP-5</b><br>High-Res Regional Model Adapter</td>
+        <td>3&nbsp;km / 15-min regional ingestion (HRRR analog → real convection-permitting ensemble).</td>
+        <td><span class="pill t">2</span></td><td><span class="pill prod">Post-FOC</span></td><td>MVP-1/2 normalization</td>
+        <td>New <b>data adapter behind the normalization layer</b> — transparent to the UI.</td></tr>
+      <tr><td class="rec"><b>MVP-6</b><br>Integration &amp; CDS Export Gateway</td>
+        <td>Authenticated REST/GraphQL + machine-readable payloads; mock→real CDS push to SIPR/JWICS/C2.</td>
+        <td><span class="pill t">5</span></td><td><span class="pill prod">Post-FOC / Prod</span></td><td>MVP-2 schema</td>
+        <td>Outbound seam wrapping all MVP outputs; the single <b>classified-enclave boundary</b>.</td></tr>
+      <tr><td class="rec"><b>MVP-7</b><br>AI-Native Global Prediction Engine</td>
+        <td>Real proprietary/AI-NWP model with independent data assimilation, running on GPU.</td>
+        <td><span class="pill t">1</span></td><td><span class="pill prod">Production</span></td><td>MVP-1/2 forecast interface</td>
+        <td>Swaps behind the <b>forecast data interface</b> — replaces derived/public forecasts with no UI change.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Integration &amp; delivery roadmap</h3>
+  <div class="diagram">
+  <svg viewBox="0 0 1120 470" width="100%" role="img" aria-label="MVP integration and delivery roadmap" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif">
+    <defs>
+      <marker id="ah4" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L8,3 L0,6 Z" fill="#2d5c86"/></marker>
+      <marker id="ah5" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L8,3 L0,6 Z" fill="#5b7d9c"/></marker>
+      <style>
+        .ph{font-size:12.5px;font-weight:700;fill:#12263a;}
+        .mt{font-size:12px;font-weight:600;fill:#1b2733;}
+        .mc{font-size:9.5px;fill:#5c6b7a;}
+        .tg{font-size:10px;font-weight:700;fill:#8a6d2f;}
+        .prog{stroke:#2d5c86;stroke-width:2.4;fill:none;marker-end:url(#ah4);}
+        .conn{stroke:#5b7d9c;stroke-width:1.6;fill:none;stroke-dasharray:5 4;marker-end:url(#ah5);}
+      </style>
+    </defs>
+
+      <!-- Phase bands -->
+      <rect x="28" y="58" width="344" height="300" rx="6" fill="#f7f9fb" stroke="#c3d4e2"/>
+      <rect x="388" y="58" width="330" height="300" rx="6" fill="#f7f9fb" stroke="#c3d4e2"/>
+      <rect x="734" y="58" width="354" height="300" rx="6" fill="#f7f9fb" stroke="#c3d4e2"/>
+
+      <text x="200" y="44" text-anchor="middle" class="ph">PHASE 1 · IOC · ≤ 14 days</text>
+      <text x="553" y="44" text-anchor="middle" class="ph">PHASE 2 · FOC · ≤ 30 days</text>
+      <text x="911" y="44" text-anchor="middle" class="ph">PHASE 3 · Post-FOC &amp; Production</text>
+
+      <!-- IOC blocks -->
+      <g>
+        <rect x="44" y="118" width="312" height="60" rx="5" fill="#eef3f7" stroke="#1f4468" stroke-width="1.4"/>
+        <text x="60" y="142" class="mt">MVP-1 · Map-Centric Viewer</text>
+        <text x="60" y="160" class="mc">AOR map · layer framework (foundation)</text>
+        <text x="340" y="142" text-anchor="end" class="tg">T1</text>
+
+        <rect x="44" y="210" width="312" height="60" rx="5" fill="#fff" stroke="#c3d4e2" stroke-width="1.4"/>
+        <text x="60" y="234" class="mt">MVP-2 · Alerting Engine</text>
+        <text x="60" y="252" class="mc">no-code rules · GeoJSON alert schema</text>
+        <text x="340" y="234" text-anchor="end" class="tg">T3</text>
+      </g>
+
+      <!-- FOC blocks -->
+      <g>
+        <rect x="404" y="118" width="298" height="60" rx="5" fill="#fff" stroke="#c3d4e2" stroke-width="1.4"/>
+        <text x="420" y="142" class="mt">MVP-3 · Probabilistic Panels</text>
+        <text x="420" y="160" class="mc">ensemble spread · impact + bias cues</text>
+        <text x="686" y="142" text-anchor="end" class="tg">T1</text>
+
+        <rect x="404" y="210" width="298" height="60" rx="5" fill="#fff" stroke="#c3d4e2" stroke-width="1.4"/>
+        <text x="420" y="234" class="mt">MVP-4 · Severe-Wx Packs</text>
+        <text x="420" y="252" class="mc">dust · heat · convection · fog rule packs</text>
+        <text x="686" y="234" text-anchor="end" class="tg">T4</text>
+      </g>
+
+      <!-- Post-FOC blocks -->
+      <g>
+        <rect x="750" y="92" width="322" height="56" rx="5" fill="#fff" stroke="#c3d4e2" stroke-width="1.4"/>
+        <text x="766" y="115" class="mt">MVP-5 · Regional Model Adapter</text>
+        <text x="766" y="133" class="mc">3 km / 15-min · plugs behind normalization</text>
+        <text x="1056" y="115" text-anchor="end" class="tg">T2</text>
+
+        <rect x="750" y="168" width="322" height="56" rx="5" fill="#f7f2e6" stroke="#ddd0b0" stroke-width="1.6"/>
+        <text x="766" y="191" class="mt">MVP-6 · CDS Export Gateway</text>
+        <text x="766" y="209" class="mc">REST/GraphQL → CDS → SIPR/JWICS/C2</text>
+        <text x="1056" y="191" text-anchor="end" class="tg">T5</text>
+
+        <rect x="750" y="244" width="322" height="56" rx="5" fill="#fff" stroke="#c3d4e2" stroke-width="1.4"/>
+        <text x="766" y="267" class="mt">MVP-7 · AI-Native Global Engine</text>
+        <text x="766" y="285" class="mc">real AI-NWP on GPU · swaps behind interface</text>
+        <text x="1056" y="267" text-anchor="end" class="tg">T1</text>
+      </g>
+
+      <!-- Progression arrows -->
+      <path class="prog" d="M373,214 L387,214"/>
+      <path class="prog" d="M719,214 L733,214"/>
+
+      <!-- Integration spine -->
+      <rect x="28" y="384" width="1060" height="52" rx="6" fill="#12263a"/>
+      <text x="558" y="408" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">Integration Backbone</text>
+      <text x="558" y="426" text-anchor="middle" fill="#cfdce8" font-size="10.5">shared JSON/GeoJSON contracts · event-driven alerting · pluggable data &amp; model adapters</text>
+
+      <!-- Connectors to spine -->
+      <path class="conn" d="M200,270 L200,382"/>
+      <path class="conn" d="M553,270 L553,382"/>
+      <path class="conn" d="M911,300 L911,382"/>
+    </svg>
+  </div>
+  <div class="legend">
+    <span><span class="swatch" style="background:#eef3f7;border:1px solid #1f4468;"></span>Foundation MVP</span>
+    <span><span class="swatch" style="background:#fff;border:1px solid #c3d4e2;"></span>Capability MVP</span>
+    <span><span class="swatch" style="background:#f7f2e6;border:1px solid #ddd0b0;"></span>Classified-boundary gateway</span>
+    <span><span class="swatch" style="background:#12263a;"></span>Shared integration backbone</span>
+    <span><span class="swatch" style="background:#5b7d9c;"></span>Publishes/consumes shared contract</span>
+  </div>
+
+  <h3>How the MVPs integrate over time</h3>
+  <div class="grid2">
+    <div class="card">
+      <h4>Loose coupling by design</h4>
+      <ul class="tight">
+        <li><b>Shared contract.</b> Every MVP speaks one JSON/GeoJSON schema — forecast fields plus the alert objects defined in MVP-2 — so slices evolve independently.</li>
+        <li><b>Event-driven alerting.</b> The rules engine emits events (EventBridge in production), decoupling <i>detection</i> (MVP-4) from <i>delivery</i> (MVP-6).</li>
+        <li><b>Pluggable adapters.</b> MVP-5 (regional) and MVP-7 (real AI model) slot in <b>behind the normalization layer</b>; the map, panels, and rules engine are unaffected when fidelity improves.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>Sequencing &amp; the classified seam</h4>
+      <ul class="tight">
+        <li><b>IOC (≤14d):</b> MVP-1 + MVP-2 deliver a working map, no-code alerting, and the GeoJSON API — the scoreable demo core.</li>
+        <li><b>FOC (≤30d):</b> MVP-3 + MVP-4 add probabilistic/impact context and prebuilt AOR severe-weather detections.</li>
+        <li><b>Post-FOC / Production:</b> MVP-5 raises resolution, MVP-7 introduces the real AI engine, and <b>MVP-6 is the single outbound boundary</b> where unclassified→classified parity is handled once, at the gateway.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 7. SCALING -->
+<section id="scaling">
+  <h2><span class="num">7</span>Prototype → Production Scaling Map (AWS)<a href="#top" class="toplink" aria-label="Back to top">&#8593; Top</a></h2>
+  <p class="lead">The three-tier shape is preserved; each local component maps to a managed/containerized AWS service. Containers land on
+  EC2/ECS first (per the stated EC2 target) with a clear path to Fargate/EKS. Classified delivery moves to AWS GovCloud with the
+  Government CDS.</p>
+
+  <table>
+    <thead><tr><th style="width:120px">Layer</th><th style="width:230px">Prototype (laptop)</th><th style="width:250px">Production (AWS)</th><th>What changes / why</th></tr></thead>
+    <tbody>
+      <tr><td class="rec"><b>Frontend</b></td><td>Vite dev server; static build</td><td>S3 + CloudFront (CDN), or served by ECS+ALB</td><td>Static assets, TLS, caching, WAF; identical React build artifact.</td></tr>
+      <tr><td class="rec"><b>API / Logic</b></td><td>Uvicorn single process</td><td>Containers on <b>EC2 → ECS/Fargate</b> (or EKS) behind ALB + API Gateway, auto-scaling</td><td>Horizontal scale, health checks, blue/green deploys; same FastAPI image.</td></tr>
+      <tr><td class="rec"><b>Database</b></td><td>SQLite + SpatiaLite file</td><td><b>RDS / Aurora PostgreSQL + PostGIS</b> (+ TimescaleDB for time-series) + ElastiCache Redis</td><td>Concurrency, spatial indexing, HA/replicas, caching; SQLAlchemy models unchanged.</td></tr>
+      <tr><td class="rec"><b>Ingestion / Scheduling</b></td><td>APScheduler in-process</td><td><b>MWAA (Airflow)</b> or Step Functions + Lambda; SQS/Kinesis for streaming</td><td>Reliable, observable, retryable pipelines at PWS cadences; decoupled workers.</td></tr>
+      <tr><td class="rec"><b>Forecast Model</b></td><td>Public NWP/AI outputs (derived)</td><td>Real <b>AI-NWP (GraphCast / ECMWF AIFS / FourCastNet)</b> on GPU — SageMaker / AWS Batch / EC2 P·G</td><td>Independent assimilation &amp; true probabilistic 3 km modeling requires accelerated compute.</td></tr>
+      <tr><td class="rec"><b>Data Lake</b></td><td>Local NetCDF/Zarr files</td><td><b>S3</b> (GRIB2/NetCDF/<b>Zarr</b>) + Glue catalog + xarray/Dask on compute</td><td>Petabyte-scale, versioned, parallel access; lifecycle tiering.</td></tr>
+      <tr><td class="rec"><b>Alerting</b></td><td>Rules engine → DB + UI</td><td>EventBridge + SNS/SQS; WebSocket/AppSync push</td><td>Fan-out to consumers &amp; the CDS builder; durable delivery.</td></tr>
+      <tr><td class="rec"><b>Classified Delivery</b></td><td>Mock CDS payload inspector</td><td><b>AWS GovCloud</b>, IL5/IL6 posture, Government CDS drop to SIPR/JWICS/C2</td><td>Real cross-domain transfer under Government accreditation.</td></tr>
+      <tr><td class="rec"><b>Identity / Auth</b></td><td>Simple token login</td><td>Amazon Cognito + <b>CAC/PKI</b>, SSO/SAML, IAM</td><td>DoD-compliant authentication &amp; RBAC.</td></tr>
+      <tr><td class="rec"><b>Security / Ops</b></td><td>Local logs</td><td>RMF/ATO artifacts, GuardDuty, Security Hub, KMS, CloudWatch + OpenTelemetry, WAF/Shield</td><td>NIST 800-53 / DoDI 8500.01·8510.01 / STIG alignment; 99.9% SLA observability.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 8. RISKS -->
+<section id="risks">
+  <h2><span class="num">8</span>Limitations, Assumptions &amp; Risks<a href="#top" class="toplink" aria-label="Back to top">&#8593; Top</a></h2>
+  <p class="lead">Stated plainly so stakeholders understand exactly what the prototype does and does not prove, and what must be true for it
+  to demo successfully and to scale.</p>
+
+  <div class="grid3">
+    <div class="card">
+      <h4>Limitations</h4>
+      <ul class="tight">
+        <li>Public data resolution/cadence is coarser than the PWS <b>3 km / 15-min</b> and <b>25 km global</b> targets.</li>
+        <li>No real assimilation of <b>LEO passive-microwave sounders</b>; precipitation is a public multi-sensor analog (GPM IMERG).</li>
+        <li>Probabilistic output uses public ensembles (GEFS/AIFS), not a proprietary calibrated model.</li>
+        <li><b>SQLite</b> is single-writer — fine for a demo, not for concurrent operations.</li>
+        <li>Classified path, CDS, ATO, and 99.9% SLA are <b>design-only</b> locally.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>Assumptions</h4>
+      <ul class="tight">
+        <li>Government furnishes <b>CDS drop-point specs, formats &amp; credentials</b> and NIPRNet landing-zone details post-award.</li>
+        <li>Laptop has outbound <b>internet</b> to reach public data APIs during the demo.</li>
+        <li>Public data <b>licenses permit</b> prototype/demonstration use with attribution.</li>
+        <li>The demo audience accepts public-data <b>analogs</b> for proprietary capabilities.</li>
+        <li>Production will run in <b>AWS (EC2 → GovCloud)</b> as directed.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>Risks &amp; Mitigations</h4>
+      <ul class="tight">
+        <li><span class="sev h">High</span> — <b>CDS latency/bandwidth</b> to classified enclaves. <i>Mitigate:</i> compact GeoJSON payloads, delta updates, early spec exchange.</li>
+        <li><span class="sev h">High</span> — <b>14-day IOC / 30-day FOC</b> schedule. <i>Mitigate:</i> phased delivery (Q&amp;A #3), reuse this scaffold.</li>
+        <li><span class="sev m">Med</span> — <b>Data source outages / rate limits / licensing</b>. <i>Mitigate:</i> multi-source adapters, caching, cache-fallback.</li>
+        <li><span class="sev m">Med</span> — <b>Model-bias fidelity</b> for non-experts. <i>Mitigate:</i> explicit uncertainty UI, plain-language impact cards.</li>
+        <li><span class="sev m">Med</span> — <b>ATO / RMF timeline</b>. <i>Mitigate:</i> Government-sponsored ingestion (Q&amp;A #4); prepare artifacts early.</li>
+        <li><span class="sev l">Low</span> — <b>SQLite→PostgreSQL migration</b>. <i>Mitigate:</i> SQLAlchemy/Alembic abstraction from day one.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 9. DATA SOURCES -->
+<section id="data">
+  <h2><span class="num">9</span>Public Data Sources to Power the Demo<a href="#top" class="toplink" aria-label="Back to top">&#8593; Top</a></h2>
+  <p class="lead">All sources below are <b>public</b> and free (some require a free registration/key). Each maps to one or more PWS tasks.
+  For the CENTCOM AOR, <b>Open-Meteo</b> is the fastest path (no key, global coverage, forecast + ensemble + air-quality + marine + flood in one API).</p>
+
+  <table>
+    <thead><tr><th style="width:190px">Source</th><th>What it provides</th><th style="width:110px">Access</th><th style="width:120px">Format</th><th style="width:110px">PWS mapping</th></tr></thead>
+    <tbody>
+      <tr><td class="rec"><b>Open-Meteo</b><br><span class="prov">open-meteo.com</span></td>
+        <td>Global forecast, <b>ensemble/probabilistic</b>, air-quality, marine, flood &amp; historical — covers the Middle East AOR.</td>
+        <td><span class="pill free">No key</span></td><td>JSON REST</td><td><span class="pill t">1</span><span class="pill t">2</span><span class="pill t">3</span><span class="pill t">4</span></td></tr>
+      <tr><td><b>NOAA / NWS API</b><br><span class="prov">api.weather.gov</span></td>
+        <td>Forecasts &amp; official <b>alerts</b> — a strong schema model for machine-readable alert objects.</td>
+        <td><span class="pill free">No key</span></td><td>JSON / GeoJSON</td><td><span class="pill t">3</span><span class="pill t">4</span></td></tr>
+      <tr><td><b>NOAA GFS / GEFS</b><br><span class="prov">AWS Open Data / NOMADS</span></td>
+        <td>Global NWP + <b>GEFS ensemble</b> for probabilistic fields.</td>
+        <td><span class="pill free">Open</span></td><td>GRIB2 / NetCDF</td><td><span class="pill t">1</span><span class="pill t">3</span></td></tr>
+      <tr><td><b>ECMWF Open Data / AIFS</b><br><span class="prov">open-data.ecmwf.int</span></td>
+        <td>Open IFS + <b>AIFS AI model</b> forecasts — reference for the AI-native global engine.</td>
+        <td><span class="pill free">Open</span></td><td>GRIB2</td><td><span class="pill t">1</span></td></tr>
+      <tr><td><b>NOAA HRRR</b><br><span class="prov">AWS Open Data</span></td>
+        <td><b>3 km convection-permitting</b> rapid-refresh model (CONUS) — analog for the Task 2 regional model.</td>
+        <td><span class="pill free">Open</span></td><td>GRIB2</td><td><span class="pill t">2</span></td></tr>
+      <tr><td><b>NASA GPM IMERG</b><br><span class="prov">gpm.nasa.gov</span></td>
+        <td><b>Multi-satellite merged precipitation</b> — direct analog to the PWS unified precipitation product.</td>
+        <td><span class="pill key">Free reg.</span></td><td>NetCDF / HDF5</td><td><span class="pill t">1</span><span class="pill t">4</span></td></tr>
+      <tr><td><b>NASA GIBS / Worldview</b><br><span class="prov">earthdata.nasa.gov</span></td>
+        <td>Satellite imagery <b>map tile layers</b> for the map-centric UI.</td>
+        <td><span class="pill free">No key</span></td><td>WMTS / WMS tiles</td><td><span class="pill t">1</span></td></tr>
+      <tr><td><b>NOAA GOES / EUMETSAT</b><br><span class="prov">AWS Open Data</span></td>
+        <td>Geostationary satellite (clouds, convection, dust signatures).</td>
+        <td><span class="pill free">Open</span></td><td>NetCDF</td><td><span class="pill t">1</span><span class="pill t">4</span></td></tr>
+      <tr><td><b>Copernicus CAMS</b><br><span class="prov">atmosphere.copernicus.eu</span></td>
+        <td><b>Dust / aerosol</b> &amp; air-quality forecasts — key for AOR blowing-dust detection.</td>
+        <td><span class="pill key">Free reg.</span></td><td>NetCDF / GRIB</td><td><span class="pill t">1</span><span class="pill t">4</span></td></tr>
+      <tr><td><b>OpenAQ</b><br><span class="prov">openaq.org</span></td>
+        <td>Ground-station air-quality measurements.</td>
+        <td><span class="pill free">No key</span></td><td>JSON REST</td><td><span class="pill t">1</span></td></tr>
+      <tr><td><b>Copernicus Marine / NOAA CO-OPS</b><br><span class="prov">marine.copernicus.eu</span></td>
+        <td><b>Sea state</b>, waves, tides &amp; currents for maritime operations.</td>
+        <td><span class="pill key">Free reg.</span></td><td>NetCDF / JSON</td><td><span class="pill t">1</span><span class="pill t">4</span></td></tr>
+      <tr><td><b>ERA5 (Copernicus CDS)</b><br><span class="prov">cds.climate.copernicus.eu</span></td>
+        <td>Reanalysis history for baselines, bias context &amp; back-testing rules.</td>
+        <td><span class="pill key">Free reg.</span></td><td>NetCDF / GRIB</td><td><span class="pill t">1</span><span class="pill t">3</span></td></tr>
+      <tr><td><b>NASA POWER</b><br><span class="prov">power.larc.nasa.gov</span></td>
+        <td>Meteorology &amp; solar parameters (incl. heat-stress inputs for WBGT).</td>
+        <td><span class="pill free">No key</span></td><td>JSON / CSV</td><td><span class="pill t">1</span></td></tr>
+    </tbody>
+  </table>
+  <p class="prov" style="margin-top:12px;">Note: attribution and rate-limit terms vary by provider; sources tagged
+  <span class="pill key">Free reg.</span> require a free account/API key. For a fast, dependency-light demo over the CENTCOM AOR,
+  Open-Meteo + NASA GIBS tiles + NWS-style alert schema cover Tasks 1–4 with zero keys.</p>
+</section>
+
+<!-- 10. APPENDIX -->
+<section id="appendix">
+  <h2><span class="num">10</span>Appendix<a href="#top" class="toplink" aria-label="Back to top">&#8593; Top</a></h2>
+  <h3>Acronyms</h3>
+  <div class="acr">
+    <div><b>AFCENT</b> — Air Forces Central Command</div>
+    <div><b>AOR</b> — Area of Responsibility</div>
+    <div><b>API</b> — Application Programming Interface</div>
+    <div><b>ATO</b> — Authority to Operate</div>
+    <div><b>C2</b> — Command and Control</div>
+    <div><b>CDS</b> — Cross-Domain Solution</div>
+    <div><b>CENTCOM</b> — U.S. Central Command</div>
+    <div><b>FFP</b> — Firm-Fixed-Price</div>
+    <div><b>FOC / IOC</b> — Full / Initial Operational Capability</div>
+    <div><b>GFP</b> — Government-Furnished Property</div>
+    <div><b>IL4/5/6</b> — DoD Cloud Impact Levels</div>
+    <div><b>JWICS</b> — Joint Worldwide Intelligence Comms System</div>
+    <div><b>METOC</b> — Meteorology and Oceanography</div>
+    <div><b>NIPRNet</b> — Non-classified IP Router Network</div>
+    <div><b>NWP</b> — Numerical Weather Prediction</div>
+    <div><b>PWS</b> — Performance Work Statement</div>
+    <div><b>RMF</b> — Risk Management Framework</div>
+    <div><b>SaaS</b> — Software-as-a-Service</div>
+    <div><b>SIPRNet</b> — Secret IP Router Network</div>
+    <div><b>SLA</b> — Service Level Agreement</div>
+    <div><b>WBGT</b> — Wet Bulb Globe Temperature</div>
+  </div>
+
+  <h3>Source Provenance</h3>
+  <p class="prov">Requirement analysis derived from the publicly posted solicitation package for <b>FA480326Q0096</b>: the Performance Work
+  Statement (PWS 3.0 — AFCENT Weather Intelligence SaaS Platform), the Standard Form 1449 solicitation/contract form, and
+  Questions &amp; Answers #2 (solicitation amendment). Targets, cadences, resolutions, and integration constraints cited throughout
+  reflect those documents.</p>
+
+  <div class="srcbox">
+    <b>Primary source.</b> Contract Opportunity — <i>Commercial Cloud-Based Weather Intelligence Service</i>,
+    Solicitation FA480326Q0096, posted on the U.S. Government System for Award Management (SAM.gov):<br>
+    <a href="https://sam.gov/opp/eeb836b063ad42a3a856afcc0be7b4bb/view" target="_blank" rel="noopener">https://sam.gov/opp/eeb836b063ad42a3a856afcc0be7b4bb/view</a><br><br>
+    This document was prepared solely from publicly available information. It is an independent technical analysis and is not a
+    Government publication, nor is it endorsed by or affiliated with the U.S. Department of Defense, the U.S. Air Force, AFCENT,
+    or USCENTCOM. All trademarks and program names are the property of their respective owners.
+  </div>
+</section>
+
+</div>
+
+<footer>
+  Prototype blueprint · Solicitation FA480326Q0096 · Prepared from publicly available information ·
+  Source: <a href="https://sam.gov/opp/eeb836b063ad42a3a856afcc0be7b4bb/view" target="_blank" rel="noopener">sam.gov/opp/eeb836b063ad42a3a856afcc0be7b4bb/view</a>
+</footer>
+
+</body>
+</html>

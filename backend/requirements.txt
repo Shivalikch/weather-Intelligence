@@ -1,0 +1,13 @@
+# AFCENT Weather Intelligence SaaS - Prototype backend
+# Python 3.12+ (developed/tested on 3.14)
+
+# Lower bounds only, so prebuilt wheels are used on the local Python
+# (developed on Python 3.14; pin exact versions once your runtime is fixed).
+fastapi>=0.115
+uvicorn[standard]>=0.34
+httpx>=0.28
+python-dotenv>=1.0
+pydantic>=2.10
+
+# --- test / dev ---
+pytest>=8.3            # external calls are mocked at the function boundary (monkeypatch)

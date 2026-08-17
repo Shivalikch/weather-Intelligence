@@ -1,0 +1,25 @@
+# --- Python / backend ---
+backend/.venv/
+**/__pycache__/
+*.pyc
+backend/weatherman.db
+backend/*.db
+.pytest_cache/
+
+# --- Node / frontend ---
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/tsconfig.tsbuildinfo
+
+# --- Secrets / local env ---
+backend/.env
+frontend/.env
+
+# Keep example configuration files
+!backend/.env.example
+!frontend/.env.example
+
+# --- Editors / OS ---
+.DS_Store
+Thumbs.db
