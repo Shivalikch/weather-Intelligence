@@ -1,6 +1,6 @@
 # AFCENT Weather Intelligence SaaS — Prototype
 
-A locally-runnable prototype of the **AFCENT / USCENTCOM Weather Intelligence platform** (solicitation FA480326Q0096). **All seven MVPs are implemented end-to-end** — each has a real FastAPI router, a service module, an acceptance test suite and a page in the UI — so the foundation demonstrably integrates with every capability described in the architecture document
+A locally-runnable prototype of the **U.S. Department of Defense (DoD) - AFCENT / USCENTCOM Weather Intelligence platform** (solicitation FA480326Q0096). **All seven MVPs are implemented end-to-end** — each has a real FastAPI router, a service module, an acceptance test suite and a page in the UI — so the foundation demonstrably integrates with every capability described in the architecture document
 ([`docs/AFCENT-Weather-Intelligence-Prototype-Architecture.html`](docs/AFCENT-Weather-Intelligence-Prototype-Architecture.html)).
 
 Where a capability needs infrastructure that cannot exist on a laptop (proprietary AI-NWP on GPU, a real Cross-Domain Solution, 3 km convection-permitting ensembles), the prototype implements the **full contract and UI** and derives the values from free public data — see §7 for exactly what is real and what is represented.
@@ -15,7 +15,8 @@ The stack is intentionally the one from that document and is built to be **conta
 
 ## 🎥 Demo
 
-**[▶ Watch the 2-minutes demo](https://github.com/Shivalikch/weather-Intelligence/releases/tag/v1.0.0)**
+**[▶ Watch the 2-minutes demo (weather-intelligence-demo-v1.0.mp4
+)](https://github.com/Shivalikch/weather-Intelligence/releases/tag/v1.0.0)**
 
 A short walkthrough of the implemented weather-intelligence capabilities and user interface.
 
